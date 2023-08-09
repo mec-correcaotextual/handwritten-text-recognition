@@ -123,7 +123,7 @@ class DataGenerator():
 class Tokenizer():
     """Manager tokens functions and charset/dictionary properties"""
 
-    def __init__(self, chars, max_text_length=128):
+    def __init__(self, chars, max_text_length=128, convert_to_ascii=False):
         self.PAD_TK, self.UNK_TK = "¶", "¤"
         self.chars = (self.PAD_TK + self.UNK_TK + chars)
 
@@ -133,13 +133,17 @@ class Tokenizer():
         self.vocab_size = len(self.chars)
         self.maxlen = max_text_length
 
+        self.convert_to_ascii = convert_to_ascii
+
     def encode(self, text):
         """Encode text to vector"""
 
         if isinstance(text, bytes):
             text = text.decode()
 
-        text = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("ASCII")
+        if self.convert_to_ascii:
+            text = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("ASCII")
+
         text = " ".join(text.split())
 
         groups = ["".join(group) for _, group in groupby(text)]
