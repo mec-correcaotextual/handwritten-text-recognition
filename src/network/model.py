@@ -24,6 +24,33 @@ from network.layers import FullGatedConv2D, GatedConv2D, OctConv2D
 from tensorflow.keras.layers import Conv2D, Bidirectional, LSTM, GRU, Dense
 from tensorflow.keras.layers import Dropout, BatchNormalization, LeakyReLU, PReLU
 from tensorflow.keras.layers import Input, Add, Activation, Lambda, MaxPooling2D, Reshape
+from tensorflow.keras.utils import register_keras_serializable
+
+
+@register_keras_serializable()
+def ctc_loss_lambda_func(y_true, y_pred):
+    """Function for computing the CTC loss"""
+
+    if len(y_true.shape) > 2:
+        y_true = tf.squeeze(y_true)
+
+    # y_pred.shape = (batch_size, string_length, alphabet_size_1_hot_encoded)
+    # output of every model is softmax
+    # so sum across alphabet_size_1_hot_encoded give 1
+    #               string_length give string length
+    input_length = tf.math.reduce_sum(y_pred, axis=-1, keepdims=False)
+    input_length = tf.math.reduce_sum(input_length, axis=-1, keepdims=True)
+
+    # y_true strings are padded with 0
+    # so sum of non-zero gives number of characters in this string
+    label_length = tf.math.count_nonzero(y_true, axis=-1, keepdims=True, dtype="int64")
+
+    loss = K.ctc_batch_cost(y_true, y_pred, input_length, label_length)
+
+    # average loss across all entries in the batch
+    loss = tf.reduce_mean(loss)
+
+    return loss
 
 
 """
@@ -156,7 +183,7 @@ class HTRModel:
 
         # create and compile
         self.model = Model(inputs=inputs, outputs=outputs)
-        self.model.compile(optimizer=optimizer, loss=self.ctc_loss_lambda_func)
+        self.model.compile(optimizer=optimizer, loss=ctc_loss_lambda_func)
 
     def fit(self,
             x=None,
@@ -264,31 +291,6 @@ class HTRModel:
                 progbar.update(steps_done)
 
         return (predicts, probabilities)
-
-    @staticmethod
-    def ctc_loss_lambda_func(y_true, y_pred):
-        """Function for computing the CTC loss"""
-
-        if len(y_true.shape) > 2:
-            y_true = tf.squeeze(y_true)
-
-        # y_pred.shape = (batch_size, string_length, alphabet_size_1_hot_encoded)
-        # output of every model is softmax
-        # so sum across alphabet_size_1_hot_encoded give 1
-        #               string_length give string length
-        input_length = tf.math.reduce_sum(y_pred, axis=-1, keepdims=False)
-        input_length = tf.math.reduce_sum(input_length, axis=-1, keepdims=True)
-
-        # y_true strings are padded with 0
-        # so sum of non-zero gives number of characters in this string
-        label_length = tf.math.count_nonzero(y_true, axis=-1, keepdims=True, dtype="int64")
-
-        loss = K.ctc_batch_cost(y_true, y_pred, input_length, label_length)
-
-        # average loss across all entries in the batch
-        loss = tf.reduce_mean(loss)
-
-        return loss
 
 
 """

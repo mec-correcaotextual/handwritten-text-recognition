@@ -7,6 +7,7 @@ Gated implementations
 
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Layer, Conv2D, Multiply, Activation
+from tensorflow.keras.utils import register_keras_serializable
 
 """
 Tensorflow Keras layer implementation of the gated convolution.
@@ -19,7 +20,7 @@ Tensorflow Keras layer implementation of the gated convolution.
         p. 646–651, 11 2017.
 """
 
-
+@register_keras_serializable()
 class GatedConv2D(Conv2D):
     """Gated Convolutional Class"""
 
@@ -58,13 +59,14 @@ Tensorflow Keras layer implementation of the gated convolution.
         NIPS'16 Proceedings of the 30th International Conference on Neural Information Processing Systems
 """
 
-
+@register_keras_serializable()
 class FullGatedConv2D(Conv2D):
     """Gated Convolutional Class"""
 
-    def __init__(self, filters, **kwargs):
-        super(FullGatedConv2D, self).__init__(filters=filters * 2, **kwargs)
-        self.nb_filters = filters
+    def __init__(self, filters=None, nb_filters=None, **kwargs):
+        _filters = nb_filters if nb_filters is not None else filters
+        super(FullGatedConv2D, self).__init__(filters=_filters * 2, **kwargs)
+        self.nb_filters = _filters
 
     def call(self, inputs):
         """Apply gated convolution"""
@@ -101,7 +103,7 @@ Reference (based):
     Github: https://github.com/koshian2/OctConv-TFKeras
 """
 
-
+@register_keras_serializable()
 class OctConv2D(Layer):
     """Octave Convolutional Class"""
 
